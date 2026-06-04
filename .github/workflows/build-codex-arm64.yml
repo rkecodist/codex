@@ -1,0 +1,61 @@
+name: Build patched Codex arm64
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "codex-rs/**"
+      - ".github/workflows/build-codex-arm64.yml"
+
+jobs:
+  build:
+    name: Build arm64 binary
+    runs-on: ubuntu-24.04-arm
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential pkg-config libssl-dev
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Show build machine info
+        run: |
+          uname -a
+          uname -m
+          rustc --version
+          cargo --version
+
+      - name: Format
+        working-directory: codex-rs
+        run: cargo fmt --all
+
+      - name: Build Codex release binary
+        working-directory: codex-rs
+        run: cargo build --release --bin codex
+
+      - name: Package binary
+        working-directory: codex-rs
+        run: |
+          mkdir -p dist
+          cp target/release/codex dist/codex
+          chmod +x dist/codex
+          tar -czf dist/codex-linux-arm64-patched.tar.gz -C dist codex
+          sha256sum dist/codex-linux-arm64-patched.tar.gz > dist/codex-linux-arm64-patched.sha256
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: codex-linux-arm64-patched
+          path: |
+            codex-rs/dist/codex-linux-arm64-patched.tar.gz
+            codex-rs/dist/codex-linux-arm64-patched.sha256
