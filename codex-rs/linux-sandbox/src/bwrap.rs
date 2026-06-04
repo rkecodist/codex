@@ -99,7 +99,11 @@ pub(crate) enum BwrapNetworkMode {
 
 impl BwrapNetworkMode {
     fn should_unshare_network(self) -> bool {
-        !matches!(self, Self::FullAccess)
+    if std::env::var_os("CODEX_BWRAP_NO_NETNS").is_some() {
+        return false;
+    }
+
+    !matches!(self, Self::FullAccess)
     }
 }
 
